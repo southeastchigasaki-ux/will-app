@@ -3,221 +3,569 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>遺言書作成ツール（スマホ完全対応版）</title>
-  <script src="https://jsdelivr.net"></script>
+  <title>相続・贈与 動的最適シミュレーション</title>
   <style>
-    body { font-family: "メイリオ", sans-serif; background: #f4f7f9; margin: 0; padding: 15px; }
-    .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    h1 { font-size: 1.3rem; text-align: center; color: #333; }
-    h2 { font-size: 1.05rem; color: #0055aa; border-bottom: 2px solid #0055aa; padding-bottom: 4px; margin-top: 25px; }
-    .form-group { margin-bottom: 12px; }
-    label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 4px; color: #444; }
-    input[type="text"] { width: 100%; box-sizing: border-box; padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
-    button { width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold; color: #fff; background: #0055aa; border: none; border-radius: 6px; margin-top: 25px; cursor: pointer; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "メイリオ", sans-serif; background: #f0f4f8; color: #333; margin: 0; padding: 12px; }
+    .container { max-width: 700px; margin: 0 auto; background: #fff; padding: 18px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    h1 { font-size: 1.25rem; text-align: center; color: #004488; margin-top: 5px; }
+    h2 { font-size: 1rem; color: #0055aa; border-left: 4px solid #0055aa; padding-left: 8px; margin-top: 22px; background: #f4f8fc; padding-top: 4px; padding-bottom: 4px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 500px) { .grid { grid-template-columns: 1fr; } }
+    .form-group { margin-bottom: 8px; }
+    label { display: block; font-size: 0.8rem; font-weight: bold; margin-bottom: 3px; color: #555; }
+    input[type="number"] { width: 100%; box-sizing: border-box; padding: 8px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; text-align: right; }
+    .checkbox-group { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 0.9rem; font-weight: bold; }
+    input[type="checkbox"] { width: 18px; height: 18px; }
+    button { width: 100%; padding: 14px; font-size: 1.1rem; font-weight: bold; color: #fff; background: #0055aa; border: none; border-radius: 6px; margin-top: 20px; cursor: pointer; }
     button:active { background: #003d7a; }
-    #status { margin-top: 15px; padding: 10px; background: #eef6ff; border-radius: 5px; font-size: 0.9rem; color: #0055aa; display: none; text-align: center; font-weight: bold; }
+    
+    #result-area { display: none; margin-top: 25px; border-top: 2px dashed #ccc; padding-top: 15px; }
+    .highlight-box { background: #fff8e6; border: 2px solid #f5a623; border-radius: 8px; padding: 14px; margin-bottom: 18px; }
+    .highlight-title { font-size: 0.9rem; font-weight: bold; color: #b26a00; }
+    .highlight-val { font-size: 1.35rem; font-weight: bold; color: #d0021b; margin: 4px 0; }
+    .sub-info { font-size: 0.88rem; line-height: 1.6; color: #333; }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px 6px; text-align: right; }
+    th { background: #0055aa; color: #fff; text-align: center; }
+    td:first-child { text-align: left; font-weight: bold; background: #f9f9f9; }
+    .plus { color: #007700; font-weight: bold; }
+    .minus { color: #d0021b; font-weight: bold; }
+    
+    .chart-box { margin-top: 15px; text-align: center; }
+    .chart-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 5px; color: #222; }
+    canvas { width: 100%; max-width: 650px; height: auto; border: 1px solid #e0e0e0; border-radius: 6px; background: #fff; }
+    .legend { display: flex; justify-content: center; gap: 15px; font-size: 0.8rem; margin-bottom: 15px; flex-wrap: wrap; }
+    .legend span { display: inline-flex; align-items: center; gap: 4px; }
+    .dot { width: 12px; height: 12px; display: inline-block; border-radius: 2px; }
+    .print-btn { background: #2e7d32; margin-top: 10px; }
+
+    @media print {
+      button { display: none; }
+      body { background: #fff; padding: 0; }
+      .container { box-shadow: none; padding: 0; }
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>遺言書作成ツール（Excel出力）</h1>
-  <div id="form-container"></div>
-  <button type="button" onclick="generateExcel()">Excelファイル（遺言書）を作成</button>
-  <div id="status"></div>
+  <h1>相続・贈与 動的最適シミュレーション</h1>
+
+  <h2>1. 資産・財産情報（単位：万円）</h2>
+  <div class="grid">
+    <div class="form-group">
+      <label>夫の金融資産（万円）</label>
+      <input type="number" id="husband_asset" value="58000">
+    </div>
+    <div class="form-group">
+      <label>夫の宅地評価額・特例前（万円）</label>
+      <input type="number" id="husband_land_value" value="10000">
+    </div>
+    <div class="form-group">
+      <label>妻の金融資産（万円）</label>
+      <input type="number" id="wife_asset" value="2000">
+    </div>
+    <div class="form-group">
+      <label>妻の宅地評価額・特例前（万円）</label>
+      <input type="number" id="wife_land_value" value="0">
+    </div>
+  </div>
+
+  <h2>2. ライフプラン・家族構成</h2>
+  <div class="grid">
+    <div class="form-group">
+      <label>夫の一次相続までの年数（年）</label>
+      <input type="number" id="husband_life" value="7">
+    </div>
+    <div class="form-group">
+      <label>妻の二次相続までの年数（年）</label>
+      <input type="number" id="wife_life" value="11">
+    </div>
+    <div class="form-group">
+      <label>子供の人数（人）</label>
+      <input type="number" id="num_children" value="2">
+    </div>
+    <div class="form-group">
+      <label>年間期待運用利回り（％）</label>
+      <input type="number" id="return_rate" value="1.0" step="0.1">
+    </div>
+  </div>
+
+  <h2>3. 生活費・税制特例</h2>
+  <div class="grid">
+    <div class="form-group">
+      <label>夫婦健在時の年間生活費（万円）</label>
+      <input type="number" id="living_cost_couple" value="345">
+    </div>
+    <div class="form-group">
+      <label>妻1人期の年間生活費（万円）</label>
+      <input type="number" id="living_cost_single" value="195">
+    </div>
+  </div>
+  <div class="checkbox-group">
+    <input type="checkbox" id="apply_kakuchi_1st" checked>
+    <label for="apply_kakuchi_1st" style="margin:0;">一次相続で「小規模宅地等の特例(80%減)」を適用</label>
+  </div>
+  <div class="checkbox-group">
+    <input type="checkbox" id="apply_kakuchi_2nd" checked>
+    <label for="apply_kakuchi_2nd" style="margin:0;">二次相続で「小規模宅地等の特例(80%減)」を適用</label>
+  </div>
+
+  <button type="button" onclick="runSimulation()">シミュレーションを実行する</button>
+
+  <div id="result-area">
+    <h2>シミュレーション結果</h2>
+    <div class="highlight-box">
+      <div class="highlight-title">★ 対策により子供に残せるお金の増加額</div>
+      <div class="highlight-val" id="res-diff-wealth">+0 円</div>
+      <div class="sub-info" id="res-summary"></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>項目</th>
+          <th>①何もしない</th>
+          <th>②動的最適化</th>
+          <th>差額 (②-①)</th>
+        </tr>
+      </thead>
+      <tbody id="res-table-body"></tbody>
+    </table>
+
+    <div class="legend">
+      <span><i class="dot" style="background:#1f77b4;"></i>夫の資産(土地含む)</span>
+      <span><i class="dot" style="background:#ff7f0e;"></i>妻の資産(土地含む)</span>
+      <span><i class="dot" style="background:#2ca02c;"></i>子の累積受取額</span>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-title">① 何もしない場合の資産推移（妻50%固定）</div>
+      <canvas id="chart1" width="640" height="320"></canvas>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-title" id="chart2-title">② 特例＆自動逆算を適用した資産推移</div>
+      <canvas id="chart2" width="640" height="320"></canvas>
+    </div>
+
+    <button type="button" class="print-btn" onclick="window.print()">結果を印刷 / PDFとして保存</button>
+  </div>
 </div>
 
 <script>
-  const fields = [
-    { section: "【基本情報】" },
-    { key: "遺言者氏名", val: "朝日太郎" },
-    { key: "作成日", val: "2026年11月13日" },
-    { key: "遺言者住所", val: "東京都〇〇区〇〇　〇丁目〇番〇号" },
-
-    { section: "【第1条：不動産（妻など）】" },
-    { key: "第1条_受取人続柄・氏名", val: "妻朝日花子" },
-    { key: "第1条_受取人生年月日", val: "昭和〇〇年〇月〇日生" },
-    { key: "土地_所在", val: "東京都〇〇区〇〇町〇丁目" },
-    { key: "土地_地目", val: "宅地" },
-    { key: "土地_地番", val: "〇番〇" },
-    { key: "土地_地積", val: "〇〇㎡" },
-    { key: "建物_所在", val: "東京都〇〇区〇〇町〇丁目〇番地〇" },
-    { key: "建物_家屋番号", val: "〇番〇" },
-    { key: "建物_種類", val: "居宅" },
-    { key: "建物_構造", val: "木造瓦葺2階建" },
-    { key: "建物_床面積1階", val: "〇〇㎡" },
-    { key: "建物_床面積2階", val: "〇〇㎡" },
-
-    { section: "【第2条：預貯金（長男など）】" },
-    { key: "第2条_受取人続柄・氏名", val: "長男朝日一郎" },
-    { key: "預金1_銀行・支店", val: "〇〇銀行　〇〇支店" },
-    { key: "預金1_種別・口座番号", val: "定期預金　口座番号 〇〇〇〇" },
-    { key: "預金2_銀行・支店", val: "〇〇銀行　〇〇支店" },
-    { key: "預金2_種別・口座番号", val: "普通預金　口座番号 〇〇〇〇" },
-
-    { section: "【第3条：株式（次男など）】" },
-    { key: "第3条_受取人続柄・氏名", val: "次男朝日次郎" },
-    { key: "株式1_銘柄・数量", val: "A株式会社の株式　数量〇〇株" },
-    { key: "株式2_銘柄・数量", val: "B株式会社の株式　数量〇〇株" },
-
-    { section: "【第4条・第5条：その他・遺言執行者】" },
-    { key: "第4条_その他財産受取人", val: "妻朝日花子" },
-    { key: "第5条_遺言執行者", val: "長男朝日一郎" }
-  ];
-
-  const container = document.getElementById("form-container");
-  fields.forEach(item => {
-    if (item.section) {
-      const h2 = document.createElement("h2");
-      h2.textContent = item.section;
-      container.appendChild(h2);
-    } else {
-      const div = document.createElement("div");
-      div.className = "form-group";
-      div.innerHTML = `<label>${item.key}</label><input type="text" id="${item.key}" value="${item.val}">`;
-      container.appendChild(div);
-    }
-  });
-
-  function showStatus(msg) {
-    const st = document.getElementById("status");
-    st.style.display = "block";
-    st.textContent = msg;
+  function calculateGiftTax(amount) {
+    const taxable = amount - 1100000;
+    if (taxable <= 0) return 0;
+    if (taxable <= 2000000) return taxable * 0.10;
+    if (taxable <= 4000000) return taxable * 0.15 - 100000;
+    if (taxable <= 6000000) return taxable * 0.20 - 300000;
+    if (taxable <= 10000000) return taxable * 0.30 - 900000;
+    if (taxable <= 15000000) return taxable * 0.40 - 1900000;
+    if (taxable <= 30000000) return taxable * 0.45 - 2650000;
+    return taxable * 0.55 - 4000000;
   }
 
-  async function generateExcel() {
-    showStatus("Excelファイルを作成中...");
-    try {
-      if (typeof ExcelJS === "undefined") {
-        showStatus("エラー：ExcelJSが読み込めていません。ネット接続を確認してください。");
-        return;
-      }
+  function getGiftMarginalRate(amount) {
+    const taxable = amount - 1100000;
+    if (taxable <= 0) return 0.0;
+    if (taxable <= 2000000) return 0.10;
+    if (taxable <= 4000000) return 0.15;
+    if (taxable <= 6000000) return 0.20;
+    if (taxable <= 10000000) return 0.30;
+    if (taxable <= 15000000) return 0.40;
+    if (taxable <= 30000000) return 0.45;
+    return 0.55;
+  }
 
-      const data = {};
-      fields.forEach(item => {
-        if (item.key) data[item.key] = document.getElementById(item.key).value;
-      });
+  function getInheritanceMarginalRate(netEstate, numHeirs) {
+    const basicDeduction = 30000000 + 6000000 * numHeirs;
+    const taxableEstate = netEstate - basicDeduction;
+    if (taxableEstate <= 0) return 0.0;
 
-      const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet("遺言書", {
-        pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1 }
-      });
+    const perHeirShare = taxableEstate / numHeirs;
+    if (perHeirShare <= 10000000) return 0.10;
+    if (perHeirShare <= 30000000) return 0.15;
+    if (perHeirShare <= 50000000) return 0.20;
+    if (perHeirShare <= 100000000) return 0.30;
+    if (perHeirShare <= 200000000) return 0.40;
+    if (perHeirShare <= 300000000) return 0.45;
+    if (perHeirShare <= 600000000) return 0.50;
+    return 0.55;
+  }
 
-      const colWidths = { A: 4, B: 10, C: 6, D: 22, E: 22, F: 22, G: 4 };
-      for (const [col, width] of Object.entries(colWidths)) {
-        ws.getColumn(col).width = width;
-      }
+  function findDynamicOptimumGift(currentAsset, numHeirs, numChildren, maxGiftPerChild = 3000000) {
+    const inhRate = getInheritanceMarginalRate(currentAsset, numHeirs);
+    if (inhRate === 0) return 0;
 
-      for (let r = 1; r <= 34; r++) {
-        ws.getRow(r).height = 22;
-      }
-      ws.getRow(2).height = 38;
-
-      ws.mergeCells("B2:F2");
-      const titleCell = ws.getCell("B2");
-      titleCell.value = "遺　言　書";
-      titleCell.font = { name: "ＭＳ Ｐ明朝", size: 20, bold: true };
-      titleCell.alignment = { horizontal: "center", vertical: "center" };
-
-      ws.getCell("B4").value = `遺言者　${data['遺言者氏名']}は本遺言書により以下の通り遺言する。`;
-      ws.getCell("B6").value = `第1条　${data['第1条_受取人続柄・氏名']}（${data['第1条_受取人生年月日']}）に次の財産を取得させる。`;
-      ws.getCell("C7").value = "(1) 土地";
-      ws.getCell("D8").value = `所在　${data['土地_所在']}`;
-      ws.getCell("D9").value = `地目　${data['土地_地目']}`;
-      ws.getCell("E9").value = `地番　${data['土地_地番']}`;
-      ws.getCell("F9").value = `地積　${data['土地_地積']}`;
-
-      ws.getCell("C10").value = "(2) 建物";
-      ws.getCell("D11").value = `所在　${data['建物_所在']}`;
-      ws.getCell("D12").value = `家屋番号　${data['建物_家屋番号']}`;
-      ws.getCell("E12").value = `種類　${data['建物_種類']}`;
-      ws.getCell("F12").value = `構造　${data['建物_構造']}`;
-      ws.getCell("D13").value = `床面積　1階　${data['建物_床面積1階']}`;
-      ws.getCell("D14").value = `　　　　2階　${data['建物_床面積2階']}`;
-
-      ws.getCell("B16").value = `第2条　${data['第2条_受取人続柄・氏名']}に以下の遺言者名義の預貯金を取得させる。`;
-      ws.getCell("C17").value = `・ ${data['預金1_銀行・支店']}　${data['預金1_種別・口座番号']}`;
-      ws.getCell("C18").value = `・ ${data['預金2_銀行・支店']}　${data['預金2_種別・口座番号']}`;
-
-      ws.getCell("B20").value = `第3条　${data['第3条_受取人続柄・氏名']}には以下の財産を取得させる。`;
-      ws.getCell("C21").value = `・ ${data['株式1_銘柄・数量']}`;
-      ws.getCell("C22").value = `・ ${data['株式2_銘柄・数量']}`;
-
-      ws.getCell("B24").value = `第4条　上記に記載のない財産についてはすべて${data['第4条_その他財産受取人']}に取得させる。`;
-      ws.getCell("B26").value = `第5条　本遺言書の遺言執行者として${data['第5条_遺言執行者']}を指定する。`;
-
-      ws.getCell("F29").value = data["作成日"];
-      ws.getCell("F29").alignment = { horizontal: "right" };
-
-      ws.mergeCells("D30:F30");
-      ws.getCell("D30").value = `住所　${data['遺言者住所']}`;
-      ws.getCell("D30").alignment = { horizontal: "right" };
-
-      ws.getCell("E31").value = `遺言者　${data['遺言者氏名']}`;
-      ws.getCell("E31").alignment = { horizontal: "right" };
-      ws.getCell("F31").value = "㊞";
-      ws.getCell("F31").alignment = { horizontal: "left" };
-
-      const bodyFont = { name: "ＭＳ Ｐ明朝", size: 11 };
-      for (let r = 4; r <= 32; r++) {
-        for (let c = 2; c <= 6; c++) {
-          const cell = ws.getCell(r, c);
-          if (cell.value) cell.font = bodyFont;
-        }
-      }
-      ws.getCell("F31").font = { name: "ＭＳ Ｐ明朝", size: 11, color: { argb: "FFFF0000" } };
-
-      const thin = { style: "thin", color: { argb: "FF000000" } };
-      for (let r = 1; r <= 33; r++) {
-        ws.getCell(r, 1).border = { left: thin };
-        ws.getCell(r, 7).border = { right: thin };
-      }
-      for (let c = 1; c <= 7; c++) {
-        ws.getCell(1, c).border = { top: thin };
-        ws.getCell(33, c).border = { bottom: thin };
-      }
-      ws.getCell(1, 1).border = { top: thin, left: thin };
-      ws.getCell(1, 7).border = { top: thin, right: thin };
-      ws.getCell(33, 1).border = { bottom: thin, left: thin };
-      ws.getCell(33, 7).border = { bottom: thin, right: thin };
-
-      const buffer = await wb.xlsx.writeBuffer();
-      const mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-      const file = new File([buffer], "遺言書.xlsx", { type: mimeType });
-
-      // ★スマホの共有メニュー（Web Share API）が使える場合は直接共有画面を開く
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        showStatus("共有メニューを開いています...");
-        await navigator.share({
-          files: [file],
-          title: "遺言書.xlsx"
-        });
-        showStatus("完了しました！");
-        return;
-      }
-
-      // PCや非対応ブラウザ用の通常ダウンロード
-      const blob = new Blob([buffer], { type: mimeType });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      document.body.appendChild(a);
-      a.style.display = "none";
-      a.href = url;
-      a.download = "遺言書.xlsx";
-      a.click();
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }, 1000);
-      showStatus("ダウンロードを実行しました！ブラウザのダウンロード一覧を確認してください。");
-
-    } catch (e) {
-      if (e.name === "AbortError") {
-        showStatus("共有がキャンセルされました。");
+    const maxTotalGift = numChildren * maxGiftPerChild;
+    let bestGift = 1100000;
+    for (let amt = 1200000; amt <= maxTotalGift; amt += 100000) {
+      if (amt > currentAsset) break;
+      if (amt > maxTotalGift) break;
+      if (getGiftMarginalRate(amt) <= inhRate) {
+        bestGift = amt;
       } else {
-        showStatus("エラー：" + e.message);
+        break;
       }
     }
+    return bestGift;
+  }
+
+  function calculateInheritanceTaxCore(netEstate, numHeirs, giftTaxCredit, spouseRatio = 0.0) {
+    const basicDeduction = 30000000 + 6000000 * numHeirs;
+    const taxableEstate = netEstate - basicDeduction;
+    if (taxableEstate <= 0) return [0, 0];
+
+    const perHeirShare = taxableEstate / numHeirs;
+    let taxRate, deduction;
+    if (perHeirShare <= 10000000) { taxRate = 0.10; deduction = 0; }
+    else if (perHeirShare <= 30000000) { taxRate = 0.15; deduction = 500000; }
+    else if (perHeirShare <= 50000000) { taxRate = 0.20; deduction = 2000000; }
+    else if (perHeirShare <= 100000000) { taxRate = 0.30; deduction = 7000000; }
+    else if (perHeirShare <= 200000000) { taxRate = 0.40; deduction = 17000000; }
+    else if (perHeirShare <= 300000000) { taxRate = 0.45; deduction = 27000000; }
+    else if (perHeirShare <= 600000000) { taxRate = 0.50; deduction = 42000000; }
+    else { taxRate = 0.55; deduction = 72000000; }
+
+    const totalInheritanceTax = (perHeirShare * taxRate - deduction) * numHeirs;
+    const spouseActualHeritage = netEstate * spouseRatio;
+    let finalTax;
+
+    if (spouseRatio > 0) {
+      const legalSpouseLimit = netEstate * 0.5;
+      const allowableLimit = Math.max(160000000, legalSpouseLimit);
+      let spouseTaxReduction;
+      if (spouseActualHeritage <= allowableLimit) {
+        spouseTaxReduction = totalInheritanceTax * spouseRatio;
+      } else {
+        spouseTaxReduction = totalInheritanceTax * (allowableLimit / netEstate);
+      }
+      finalTax = totalInheritanceTax - spouseTaxReduction;
+    } else {
+      finalTax = totalInheritanceTax;
+    }
+
+    finalTax = Math.max(0, finalTax - giftTaxCredit);
+    return [finalTax, spouseActualHeritage];
+  }
+
+  function simulateTimeline(config, useDynamicGift = false, spouseSharePct = 50) {
+    let husbandAsset = config.husband_asset;
+    let wifeAsset = config.wife_asset;
+    let landValueH = config.husband_land_value;
+    let landValueW = config.wife_land_value;
+
+    const yearsToFirst = config.husband_life;
+    const yearsToSecond = config.wife_life;
+
+    const husbandGiftHistory = [];
+    const wifeGiftHistory = [];
+    let childrenReceived = 0;
+    let totalGiftTax = 0;
+    const timelineHistory = [];
+
+    timelineHistory.push({
+      year: 0, husband: husbandAsset + landValueH, wife: wifeAsset + landValueW, children: childrenReceived, gift_amt: 0, inh_rate: 0
+    });
+
+    for (let year = 1; year <= yearsToFirst; year++) {
+      const currentTotalH = husbandAsset + landValueH;
+      const inhRate = getInheritanceMarginalRate(currentTotalH, config.num_children + 1);
+      let giftAmt = useDynamicGift ? findDynamicOptimumGift(currentTotalH, config.num_children + 1, config.num_children) : 0;
+
+      const totalGiftYear = giftAmt * config.num_children;
+      if (giftAmt > 0 && husbandAsset >= totalGiftYear) {
+        husbandAsset -= totalGiftYear;
+        const tax = calculateGiftTax(giftAmt);
+        childrenReceived += (giftAmt - tax) * config.num_children;
+        totalGiftTax += tax * config.num_children;
+        husbandGiftHistory.push(giftAmt);
+      } else {
+        giftAmt = 0;
+        husbandGiftHistory.push(0);
+      }
+
+      husbandAsset = (husbandAsset - config.living_cost_couple / 2) * (1 + config.return_rate);
+      wifeAsset = (wifeAsset - config.living_cost_couple / 2) * (1 + config.return_rate);
+      childrenReceived = childrenReceived * (1 + config.return_rate);
+      landValueH *= (1 + config.return_rate);
+      landValueW *= (1 + config.return_rate);
+
+      wifeGiftHistory.push(0);
+      timelineHistory.push({
+        year: year, husband: husbandAsset + landValueH, wife: wifeAsset + landValueW, children: childrenReceived, gift_amt: giftAmt, inh_rate: inhRate
+      });
+    }
+
+    const recent7GiftsH = husbandGiftHistory.slice(-7);
+    let addToEstateH = 0;
+    let giftTaxCreditH = 0;
+    [...recent7GiftsH].reverse().forEach((gAmt, idx) => {
+      const tPaid = calculateGiftTax(gAmt) * config.num_children;
+      if (idx < 3) {
+        addToEstateH += gAmt * config.num_children;
+        giftTaxCreditH += tPaid;
+      }
+    });
+    const old4YearsH = recent7GiftsH.length > 3 ? recent7GiftsH.slice(0, -3) : [];
+    const sumOld4H = old4YearsH.reduce((a, b) => a + b, 0);
+    addToEstateH += Math.max(0, (sumOld4H * config.num_children) - 1000000);
+    giftTaxCreditH += old4YearsH.reduce((acc, g) => acc + calculateGiftTax(g) * config.num_children, 0);
+
+    const appliedLandValue1st = config.apply_kakuchi_1st ? landValueH * 0.20 : landValueH;
+    const estateForTax1st = husbandAsset + appliedLandValue1st + addToEstateH;
+
+    const [firstTax] = calculateInheritanceTaxCore(
+      estateForTax1st, config.num_children + 1, giftTaxCreditH, spouseSharePct / 100
+    );
+
+    wifeAsset += (husbandAsset - firstTax) * (spouseSharePct / 100);
+    landValueW += landValueH;
+    landValueH = 0;
+
+    const childrenHeritage1st = Math.max(0, (husbandAsset - firstTax) - (husbandAsset - firstTax) * (spouseSharePct / 100));
+    childrenReceived += childrenHeritage1st;
+    husbandAsset = 0;
+
+    timelineHistory[timelineHistory.length - 1] = {
+      year: yearsToFirst, husband: 0, wife: wifeAsset + landValueW, children: childrenReceived, gift_amt: 0, inh_rate: 0
+    };
+
+    for (let year = yearsToFirst + 1; year <= yearsToSecond; year++) {
+      const currentTotalW = wifeAsset + landValueW;
+      const inhRate = getInheritanceMarginalRate(currentTotalW, config.num_children);
+      let giftAmt = useDynamicGift ? findDynamicOptimumGift(currentTotalW, config.num_children, config.num_children) : 0;
+
+      const totalGiftYearW = giftAmt * config.num_children;
+      if (giftAmt > 0 && wifeAsset >= totalGiftYearW) {
+        wifeAsset -= totalGiftYearW;
+        const tax = calculateGiftTax(giftAmt);
+        childrenReceived += (giftAmt - tax) * config.num_children;
+        totalGiftTax += tax * config.num_children;
+        wifeGiftHistory.push(giftAmt);
+      } else {
+        giftAmt = 0;
+        wifeGiftHistory.push(0);
+      }
+
+      wifeAsset = (wifeAsset - config.living_cost_single) * (1 + config.return_rate);
+      childrenReceived = childrenReceived * (1 + config.return_rate);
+      landValueW *= (1 + config.return_rate);
+
+      timelineHistory.push({
+        year: year, husband: 0, wife: wifeAsset + landValueW, children: childrenReceived, gift_amt: giftAmt, inh_rate: inhRate
+      });
+    }
+
+    const recent7GiftsW = wifeGiftHistory.slice(-7);
+    let addToEstateW = 0;
+    let giftTaxCreditW = 0;
+    [...recent7GiftsW].reverse().forEach((gAmt, idx) => {
+      const tPaid = calculateGiftTax(gAmt) * config.num_children;
+      if (idx < 3) {
+        addToEstateW += gAmt * config.num_children;
+        giftTaxCreditW += tPaid;
+      }
+    });
+    const old4YearsW = recent7GiftsW.length > 3 ? recent7GiftsW.slice(0, -3) : [];
+    const sumOld4W = old4YearsW.reduce((a, b) => a + b, 0);
+    addToEstateW += Math.max(0, (sumOld4W * config.num_children) - 1000000);
+    giftTaxCreditW += old4YearsW.reduce((acc, g) => acc + calculateGiftTax(g) * config.num_children, 0);
+
+    const appliedLandValue2nd = config.apply_kakuchi_2nd ? landValueW * 0.20 : landValueW;
+    const estateForTax2nd = wifeAsset + appliedLandValue2nd + addToEstateW;
+
+    const [secondTax] = calculateInheritanceTaxCore(
+      estateForTax2nd, config.num_children, giftTaxCreditW, 0.0
+    );
+
+    const childrenHeritage2nd = Math.max(0, wifeAsset - secondTax) + landValueW;
+    childrenReceived += childrenHeritage2nd;
+
+    timelineHistory[timelineHistory.length - 1] = {
+      year: yearsToSecond, husband: 0, wife: 0, children: childrenReceived, gift_amt: 0, inh_rate: 0
+    };
+
+    return { childrenReceived, totalGiftTax, firstTax, secondTax, timelineHistory };
+  }
+
+  function findBestSpouseShareRatio(config) {
+    let bestRatio = 50;
+    let maxWealth = 0;
+    for (let ratio = 0; ratio <= 100; ratio++) {
+      const res = simulateTimeline(config, true, ratio);
+      if (res.childrenReceived > maxWealth) {
+        maxWealth = res.childrenReceived;
+        bestRatio = ratio;
+      }
+    }
+    return bestRatio;
+  }
+
+  function drawChart(canvasId, timeline, maxValOku) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width;
+    const H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const padL = 55, padR = 20, padT = 20, padB = 35;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+    const maxYear = timeline[timeline.length - 1].year;
+
+    ctx.strokeStyle = "#e0e0e0";
+    ctx.lineWidth = 1;
+    ctx.font = "12px sans-serif";
+    ctx.fillStyle = "#555";
+    ctx.textAlign = "right";
+
+    const steps = 5;
+    for (let i = 0; i <= steps; i++) {
+      const val = (maxValOku / steps) * i;
+      const y = padT + plotH - (plotH * (i / steps));
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(W - padR, y);
+      ctx.stroke();
+      ctx.fillText(val.toFixed(1) + "億", padL - 6, y + 4);
+    }
+
+    ctx.textAlign = "center";
+    timeline.forEach(d => {
+      const x = padL + (plotW * (d.year / maxYear));
+      ctx.fillText(d.year + "年", x, H - 10);
+    });
+
+    function plotLine(key, color) {
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      timeline.forEach((d, idx) => {
+        const valOku = d[key] / 100000000;
+        const x = padL + (plotW * (d.year / maxYear));
+        const y = padT + plotH - (plotH * (valOku / maxValOku));
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      timeline.forEach(d => {
+        const valOku = d[key] / 100000000;
+        const x = padL + (plotW * (d.year / maxYear));
+        const y = padT + plotH - (plotH * (valOku / maxValOku));
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    plotLine("husband", "#1f77b4");
+    plotLine("wife", "#ff7f0e");
+    plotLine("children", "#2ca02c");
+  }
+
+  function fmt(num) {
+    return Math.round(num).toLocaleString("ja-JP") + "円";
+  }
+
+  function runSimulation() {
+    const config = {
+      husband_asset: Number(document.getElementById("husband_asset").value) * 10000,
+      husband_land_value: Number(document.getElementById("husband_land_value").value) * 10000,
+      wife_asset: Number(document.getElementById("wife_asset").value) * 10000,
+      wife_land_value: Number(document.getElementById("wife_land_value").value) * 10000,
+      husband_life: Number(document.getElementById("husband_life").value),
+      wife_life: Number(document.getElementById("wife_life").value),
+      num_children: Number(document.getElementById("num_children").value),
+      return_rate: Number(document.getElementById("return_rate").value) / 100,
+      living_cost_couple: Number(document.getElementById("living_cost_couple").value) * 10000,
+      living_cost_single: Number(document.getElementById("living_cost_single").value) * 10000,
+      apply_kakuchi_1st: document.getElementById("apply_kakuchi_1st").checked,
+      apply_kakuchi_2nd: document.getElementById("apply_kakuchi_2nd").checked
+    };
+
+    const bestSpouseRatio = findBestSpouseShareRatio(config);
+    const none = simulateTimeline(config, false, 50);
+    const opt = simulateTimeline(config, true, bestSpouseRatio);
+
+    const totalTaxNone = none.firstTax + none.secondTax;
+    const totalTaxOpt = opt.totalGiftTax + opt.firstTax + opt.secondTax;
+    const diffWealth = opt.childrenReceived - none.childrenReceived;
+    const diffTax = totalTaxNone - totalTaxOpt;
+
+    let reversalYear = null;
+    let reversalGiftAmt = null;
+    for (let i = 1; i < opt.timelineHistory.length; i++) {
+      const data = opt.timelineHistory[i];
+      const y = data.year;
+      const prevAsset = (y <= config.husband_life) ? opt.timelineHistory[y - 1].husband : opt.timelineHistory[y - 1].wife;
+      if (data.gift_amt <= 110000 && prevAsset > 0) {
+        reversalYear = y;
+        reversalGiftAmt = data.gift_amt;
+        break;
+      }
+    }
+
+    const firstYearGift = opt.timelineHistory.length > 1 ? opt.timelineHistory[1].gift_amt : 0;
+    const reversalText = reversalYear
+      ? `・贈与額最適化のタイミング：<b>${reversalYear}年目</b>（1人あたり ${fmt(reversalGiftAmt)}）`
+      : `・期間中に贈与税率が相続税率を上回るタイミングはありませんでした。`;
+
+    document.getElementById("res-diff-wealth").textContent = `+${fmt(diffWealth)} 増えます！`;
+    document.getElementById("res-summary").innerHTML = `
+      ・一次相続の配偶者最適割合：<b>${bestSpouseRatio}%</b><br>
+      ・初回(1年目)の1人あたり最適贈与額：<b>${fmt(firstYearGift)}</b><br>
+      ${reversalText}
+    `;
+
+    const tbody = document.getElementById("res-table-body");
+    tbody.innerHTML = `
+      <tr>
+        <td>子供への最終手残り</td>
+        <td>${fmt(none.childrenReceived)}</td>
+        <td>${fmt(opt.childrenReceived)}</td>
+        <td class="plus">+${fmt(diffWealth)}</td>
+      </tr>
+      <tr>
+        <td>税金の総負担額</td>
+        <td>${fmt(totalTaxNone)}</td>
+        <td>${fmt(totalTaxOpt)}</td>
+        <td class="minus">-${fmt(diffTax)}</td>
+      </tr>
+      <tr>
+        <td>　├ 贈与税（累計）</td>
+        <td>0円</td>
+        <td>${fmt(opt.totalGiftTax)}</td>
+        <td>+${fmt(opt.totalGiftTax)}</td>
+      </tr>
+      <tr>
+        <td>　├ 一次相続税(夫)</td>
+        <td>${fmt(none.firstTax)}</td>
+        <td>${fmt(opt.firstTax)}</td>
+        <td>${fmt(opt.firstTax - none.firstTax)}</td>
+      </tr>
+      <tr>
+        <td>　└ 二次相続税(妻)</td>
+        <td>${fmt(none.secondTax)}</td>
+        <td>${fmt(opt.secondTax)}</td>
+        <td>${fmt(opt.secondTax - none.secondTax)}</td>
+      </tr>
+    `;
+
+    document.getElementById("chart2-title").textContent = `② 特例＆自動逆算を適用した資産推移（妻取得割合: ${bestSpouseRatio}%）`;
+    document.getElementById("result-area").style.display = "block";
+
+    const allVals = [...none.timelineHistory, ...opt.timelineHistory].flatMap(d => [d.husband, d.wife, d.children]);
+    const maxValOku = Math.ceil((Math.max(...allVals) / 100000000) * 1.1) || 1;
+
+    drawChart("chart1", none.timelineHistory, maxValOku);
+    drawChart("chart2", opt.timelineHistory, maxValOku);
+
+    document.getElementById("result-area").scrollIntoView({ behavior: "smooth" });
   }
 </script>
 </body>
