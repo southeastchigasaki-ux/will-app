@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>遺言書作成ツール（Excel出力）</title>
+  <title>遺言書作成ツール（スマホ完全対応版）</title>
   <script src="https://jsdelivr.net"></script>
   <style>
     body { font-family: "メイリオ", sans-serif; background: #f4f7f9; margin: 0; padding: 15px; }
@@ -15,6 +15,7 @@
     input[type="text"] { width: 100%; box-sizing: border-box; padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
     button { width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold; color: #fff; background: #0055aa; border: none; border-radius: 6px; margin-top: 25px; cursor: pointer; }
     button:active { background: #003d7a; }
+    #status { margin-top: 15px; padding: 10px; background: #eef6ff; border-radius: 5px; font-size: 0.9rem; color: #0055aa; display: none; text-align: center; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -23,6 +24,7 @@
   <h1>遺言書作成ツール（Excel出力）</h1>
   <div id="form-container"></div>
   <button type="button" onclick="generateExcel()">Excelファイル（遺言書）を作成</button>
+  <div id="status"></div>
 </div>
 
 <script>
@@ -77,10 +79,17 @@
     }
   });
 
+  function showStatus(msg) {
+    const st = document.getElementById("status");
+    st.style.display = "block";
+    st.textContent = msg;
+  }
+
   async function generateExcel() {
+    showStatus("Excelファイルを作成中...");
     try {
       if (typeof ExcelJS === "undefined") {
-        alert("エラー：Excel作成プログラムが読み込めていません。ネット接続を確認してください。");
+        showStatus("エラー：ExcelJSが読み込めていません。ネット接続を確認してください。");
         return;
       }
 
@@ -94,26 +103,22 @@
         pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1 }
       });
 
-      // ★バグ修正：列幅の正しい指定方法
       const colWidths = { A: 4, B: 10, C: 6, D: 22, E: 22, F: 22, G: 4 };
       for (const [col, width] of Object.entries(colWidths)) {
         ws.getColumn(col).width = width;
       }
 
-      // 行の高さ調整
       for (let r = 1; r <= 34; r++) {
         ws.getRow(r).height = 22;
       }
       ws.getRow(2).height = 38;
 
-      // タイトル
       ws.mergeCells("B2:F2");
       const titleCell = ws.getCell("B2");
       titleCell.value = "遺　言　書";
       titleCell.font = { name: "ＭＳ Ｐ明朝", size: 20, bold: true };
       titleCell.alignment = { horizontal: "center", vertical: "center" };
 
-      // 本文
       ws.getCell("B4").value = `遺言者　${data['遺言者氏名']}は本遺言書により以下の通り遺言する。`;
       ws.getCell("B6").value = `第1条　${data['第1条_受取人続柄・氏名']}（${data['第1条_受取人生年月日']}）に次の財産を取得させる。`;
       ws.getCell("C7").value = "(1) 土地";
@@ -141,7 +146,6 @@
       ws.getCell("B24").value = `第4条　上記に記載のない財産についてはすべて${data['第4条_その他財産受取人']}に取得させる。`;
       ws.getCell("B26").value = `第5条　本遺言書の遺言執行者として${data['第5条_遺言執行者']}を指定する。`;
 
-      // 署名・日付・住所
       ws.getCell("F29").value = data["作成日"];
       ws.getCell("F29").alignment = { horizontal: "right" };
 
@@ -154,7 +158,6 @@
       ws.getCell("F31").value = "㊞";
       ws.getCell("F31").alignment = { horizontal: "left" };
 
-      // 全体フォント適用
       const bodyFont = { name: "ＭＳ Ｐ明朝", size: 11 };
       for (let r = 4; r <= 32; r++) {
         for (let c = 2; c <= 6; c++) {
@@ -164,7 +167,6 @@
       }
       ws.getCell("F31").font = { name: "ＭＳ Ｐ明朝", size: 11, color: { argb: "FFFF0000" } };
 
-      // 外枠の罫線
       const thin = { style: "thin", color: { argb: "FF000000" } };
       for (let r = 1; r <= 33; r++) {
         ws.getCell(r, 1).border = { left: thin };
@@ -179,27 +181,42 @@
       ws.getCell(33, 1).border = { bottom: thin, left: thin };
       ws.getCell(33, 7).border = { bottom: thin, right: thin };
 
-      // ダウンロード実行
       const buffer = await wb.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      const file = new File([buffer], "遺言書.xlsx", { type: mimeType });
+
+      // ★スマホの共有メニュー（Web Share API）が使える場合は直接共有画面を開く
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        showStatus("共有メニューを開いています...");
+        await navigator.share({
+          files: [file],
+          title: "遺言書.xlsx"
+        });
+        showStatus("完了しました！");
+        return;
+      }
+
+      // PCや非対応ブラウザ用の通常ダウンロード
+      const blob = new Blob([buffer], { type: mimeType });
       const url = window.URL.createObjectURL(blob);
-      
       const a = document.createElement("a");
       document.body.appendChild(a);
       a.style.display = "none";
       a.href = url;
       a.download = "遺言書.xlsx";
       a.click();
-      
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       }, 1000);
-
-      alert("遺言書.xlsx を作成しました！Chromeの「ダウンロード」一覧を確認してください。");
+      showStatus("ダウンロードを実行しました！ブラウザのダウンロード一覧を確認してください。");
 
     } catch (e) {
-      alert("エラーが発生しました：\n" + e.message);
+      if (e.name === "AbortError") {
+        showStatus("共有がキャンセルされました。");
+      } else {
+        showStatus("エラー：" + e.message);
+      }
     }
   }
 </script>
