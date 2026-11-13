@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>遺言書作成ツール（Excel出力）</title>
-  <!-- ExcelJSの読み込み -->
-  <script src="https://cloudflare.com"></script>
+  <script src="https://jsdelivr.net"></script>
   <style>
     body { font-family: "メイリオ", sans-serif; background: #f4f7f9; margin: 0; padding: 15px; }
     .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -23,11 +22,10 @@
 <div class="container">
   <h1>遺言書作成ツール（Excel出力）</h1>
   <div id="form-container"></div>
-  <button onclick="generateExcel()">Excelファイル（遺言書）を作成</button>
+  <button type="button" onclick="generateExcel()">Excelファイル（遺言書）を作成</button>
 </div>
 
 <script>
-  // 1. 元のPythonの self.fields と同じデータ構造を定義
   const fields = [
     { section: "【基本情報】" },
     { key: "遺言者氏名", val: "朝日太郎" },
@@ -65,7 +63,6 @@
     { key: "第5条_遺言執行者", val: "長男朝日一郎" }
   ];
 
-  // 2. 画面にフォームを自動生成（create_widgetsの移植）
   const container = document.getElementById("form-container");
   fields.forEach(item => {
     if (item.section) {
@@ -80,110 +77,130 @@
     }
   });
 
-  // 3. Excel生成処理（generate_excelの移植）
   async function generateExcel() {
-    const data = {};
-    fields.forEach(item => {
-      if (item.key) data[item.key] = document.getElementById(item.key).value;
-    });
-
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("遺言書", {
-      pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1 } // 9 = A4
-    });
-
-    // 列幅の調整
-    ws.columns = [
-      { key: 'A', width: 4 }, { key: 'B', width: 10 }, { key: 'C', width: 6 },
-      { key: 'D', width: 22 }, { key: 'E', width: 22 }, { key: 'F', width: 22 }, { key: 'G', width: 4 }
-    ];
-
-    // 行の高さ調整
-    for (let r = 1; r <= 34; r++) ws.getRow(r).height = 22;
-    ws.getRow(2).height = 38;
-
-    // タイトル
-    ws.mergeCells("B2:F2");
-    const titleCell = ws.getCell("B2");
-    titleCell.value = "遺　言　書";
-    titleCell.font = { name: "ＭＳ Ｐ明朝", size: 20, bold: true };
-    titleCell.alignment = { horizontal: "center", vertical: "center" };
-
-    // 本文の書き込み
-    ws.getCell("B4").value = `遺言者　${data['遺言者氏名']}は本遺言書により以下の通り遺言する。`;
-    ws.getCell("B6").value = `第1条　${data['第1条_受取人続柄・氏名']}（${data['第1条_受取人生年月日']}）に次の財産を取得させる。`;
-    ws.getCell("C7").value = "(1) 土地";
-    ws.getCell("D8").value = `所在　${data['土地_所在']}`;
-    ws.getCell("D9").value = `地目　${data['土地_地目']}`;
-    ws.getCell("E9").value = `地番　${data['土地_地番']}`;
-    ws.getCell("F9").value = `地積　${data['土地_地積']}`;
-
-    ws.getCell("C10").value = "(2) 建物";
-    ws.getCell("D11").value = `所在　${data['建物_所在']}`;
-    ws.getCell("D12").value = `家屋番号　${data['建物_家屋番号']}`;
-    ws.getCell("E12").value = `種類　${data['建物_種類']}`;
-    ws.getCell("F12").value = `構造　${data['建物_構造']}`;
-    ws.getCell("D13").value = `床面積　1階　${data['建物_床面積1階']}`;
-    ws.getCell("D14").value = `　　　　2階　${data['建物_床面積2階']}`;
-
-    ws.getCell("B16").value = `第2条　${data['第2条_受取人続柄・氏名']}に以下の遺言者名義の預貯金を取得させる。`;
-    ws.getCell("C17").value = `・ ${data['預金1_銀行・支店']}　${data['預金1_種別・口座番号']}`;
-    ws.getCell("C18").value = `・ ${data['預金2_銀行・支店']}　${data['預金2_種別・口座番号']}`;
-
-    ws.getCell("B20").value = `第3条　${data['第3条_受取人続柄・氏名']}には以下の財産を取得させる。`;
-    ws.getCell("C21").value = `・ ${data['株式1_銘柄・数量']}`;
-    ws.getCell("C22").value = `・ ${data['株式2_銘柄・数量']}`;
-
-    ws.getCell("B24").value = `第4条　上記に記載のない財産についてはすべて${data['第4条_その他財産受取人']}に取得させる。`;
-    ws.getCell("B26").value = `第5条　本遺言書の遺言執行者として${data['第5条_遺言執行者']}を指定する。`;
-
-    // 署名・日付・住所
-    ws.getCell("F29").value = data["作成日"];
-    ws.getCell("F29").alignment = { horizontal: "right" };
-
-    ws.mergeCells("D30:F30");
-    ws.getCell("D30").value = `住所　${data['遺言者住所']}`;
-    ws.getCell("D30").alignment = { horizontal: "right" };
-
-    ws.getCell("E31").value = `遺言者　${data['遺言者氏名']}`;
-    ws.getCell("E31").alignment = { horizontal: "right" };
-    ws.getCell("F31").value = "㊞";
-    ws.getCell("F31").alignment = { horizontal: "left" };
-
-    // 全体フォント適用
-    const bodyFont = { name: "ＭＳ Ｐ明朝", size: 11 };
-    for (let r = 4; r <= 32; r++) {
-      for (let c = 2; c <= 6; c++) {
-        const cell = ws.getCell(r, c);
-        if (cell.value) cell.font = bodyFont;
+    try {
+      if (typeof ExcelJS === "undefined") {
+        alert("エラー：Excel作成プログラムが読み込めていません。ネット接続を確認してください。");
+        return;
       }
-    }
-    ws.getCell("F31").font = { name: "ＭＳ Ｐ明朝", size: 11, color: { argb: "FFFF0000" } };
 
-    // 外枠の罫線
-    const thin = { style: "thin", color: { argb: "FF000000" } };
-    for (let r = 1; r <= 33; r++) {
-      ws.getCell(r, 1).border = { left: thin };
-      ws.getCell(r, 7).border = { right: thin };
-    }
-    for (let c = 1; c <= 7; c++) {
-      ws.getCell(1, c).border = { top: thin };
-      ws.getCell(33, c).border = { bottom: thin };
-    }
-    ws.getCell(1, 1).border = { top: thin, left: thin };
-    ws.getCell(1, 7).border = { top: thin, right: thin };
-    ws.getCell(33, 1).border = { bottom: thin, left: thin };
-    ws.getCell(33, 7).border = { bottom: thin, right: thin };
+      const data = {};
+      fields.forEach(item => {
+        if (item.key) data[item.key] = document.getElementById(item.key).value;
+      });
 
-    // ダウンロード実行
-    const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "遺言書.xlsx";
-    a.click();
-    window.URL.revokeObjectURL(url);
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("遺言書", {
+        pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1 }
+      });
+
+      // ★バグ修正：列幅の正しい指定方法
+      const colWidths = { A: 4, B: 10, C: 6, D: 22, E: 22, F: 22, G: 4 };
+      for (const [col, width] of Object.entries(colWidths)) {
+        ws.getColumn(col).width = width;
+      }
+
+      // 行の高さ調整
+      for (let r = 1; r <= 34; r++) {
+        ws.getRow(r).height = 22;
+      }
+      ws.getRow(2).height = 38;
+
+      // タイトル
+      ws.mergeCells("B2:F2");
+      const titleCell = ws.getCell("B2");
+      titleCell.value = "遺　言　書";
+      titleCell.font = { name: "ＭＳ Ｐ明朝", size: 20, bold: true };
+      titleCell.alignment = { horizontal: "center", vertical: "center" };
+
+      // 本文
+      ws.getCell("B4").value = `遺言者　${data['遺言者氏名']}は本遺言書により以下の通り遺言する。`;
+      ws.getCell("B6").value = `第1条　${data['第1条_受取人続柄・氏名']}（${data['第1条_受取人生年月日']}）に次の財産を取得させる。`;
+      ws.getCell("C7").value = "(1) 土地";
+      ws.getCell("D8").value = `所在　${data['土地_所在']}`;
+      ws.getCell("D9").value = `地目　${data['土地_地目']}`;
+      ws.getCell("E9").value = `地番　${data['土地_地番']}`;
+      ws.getCell("F9").value = `地積　${data['土地_地積']}`;
+
+      ws.getCell("C10").value = "(2) 建物";
+      ws.getCell("D11").value = `所在　${data['建物_所在']}`;
+      ws.getCell("D12").value = `家屋番号　${data['建物_家屋番号']}`;
+      ws.getCell("E12").value = `種類　${data['建物_種類']}`;
+      ws.getCell("F12").value = `構造　${data['建物_構造']}`;
+      ws.getCell("D13").value = `床面積　1階　${data['建物_床面積1階']}`;
+      ws.getCell("D14").value = `　　　　2階　${data['建物_床面積2階']}`;
+
+      ws.getCell("B16").value = `第2条　${data['第2条_受取人続柄・氏名']}に以下の遺言者名義の預貯金を取得させる。`;
+      ws.getCell("C17").value = `・ ${data['預金1_銀行・支店']}　${data['預金1_種別・口座番号']}`;
+      ws.getCell("C18").value = `・ ${data['預金2_銀行・支店']}　${data['預金2_種別・口座番号']}`;
+
+      ws.getCell("B20").value = `第3条　${data['第3条_受取人続柄・氏名']}には以下の財産を取得させる。`;
+      ws.getCell("C21").value = `・ ${data['株式1_銘柄・数量']}`;
+      ws.getCell("C22").value = `・ ${data['株式2_銘柄・数量']}`;
+
+      ws.getCell("B24").value = `第4条　上記に記載のない財産についてはすべて${data['第4条_その他財産受取人']}に取得させる。`;
+      ws.getCell("B26").value = `第5条　本遺言書の遺言執行者として${data['第5条_遺言執行者']}を指定する。`;
+
+      // 署名・日付・住所
+      ws.getCell("F29").value = data["作成日"];
+      ws.getCell("F29").alignment = { horizontal: "right" };
+
+      ws.mergeCells("D30:F30");
+      ws.getCell("D30").value = `住所　${data['遺言者住所']}`;
+      ws.getCell("D30").alignment = { horizontal: "right" };
+
+      ws.getCell("E31").value = `遺言者　${data['遺言者氏名']}`;
+      ws.getCell("E31").alignment = { horizontal: "right" };
+      ws.getCell("F31").value = "㊞";
+      ws.getCell("F31").alignment = { horizontal: "left" };
+
+      // 全体フォント適用
+      const bodyFont = { name: "ＭＳ Ｐ明朝", size: 11 };
+      for (let r = 4; r <= 32; r++) {
+        for (let c = 2; c <= 6; c++) {
+          const cell = ws.getCell(r, c);
+          if (cell.value) cell.font = bodyFont;
+        }
+      }
+      ws.getCell("F31").font = { name: "ＭＳ Ｐ明朝", size: 11, color: { argb: "FFFF0000" } };
+
+      // 外枠の罫線
+      const thin = { style: "thin", color: { argb: "FF000000" } };
+      for (let r = 1; r <= 33; r++) {
+        ws.getCell(r, 1).border = { left: thin };
+        ws.getCell(r, 7).border = { right: thin };
+      }
+      for (let c = 1; c <= 7; c++) {
+        ws.getCell(1, c).border = { top: thin };
+        ws.getCell(33, c).border = { bottom: thin };
+      }
+      ws.getCell(1, 1).border = { top: thin, left: thin };
+      ws.getCell(1, 7).border = { top: thin, right: thin };
+      ws.getCell(33, 1).border = { bottom: thin, left: thin };
+      ws.getCell(33, 7).border = { bottom: thin, right: thin };
+
+      // ダウンロード実行
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = window.URL.createObjectURL(blob);
+      
+      const a = document.createElement("a");
+      document.body.appendChild(a);
+      a.style.display = "none";
+      a.href = url;
+      a.download = "遺言書.xlsx";
+      a.click();
+      
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 1000);
+
+      alert("遺言書.xlsx を作成しました！Chromeの「ダウンロード」一覧を確認してください。");
+
+    } catch (e) {
+      alert("エラーが発生しました：\n" + e.message);
+    }
   }
 </script>
 </body>
